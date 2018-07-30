@@ -9,13 +9,16 @@
 
 #define DEV_NAME "freq"
 #define DEFAULT_GPIO_PIN 17
-#define BUFFER_SIZE 16
+#define DEFAULT_MIN_FREQ 5000
+#define DEFAULT_MAX_FREQ 10000
+#define BUFFER_SIZE 256
 
 static struct timespec prev_time;
 static unsigned long ns_periods[BUFFER_SIZE];
-static int read_ptr;
-static int write_ptr;
+static int buf_ptr;
 static int gpio_pin = DEFAULT_GPIO_PIN;
+static int min_freq = DEFAULT_MIN_FREQ;
+static int max_freq = DEFAULT_MAX_FREQ;
 static int freq_irq = -1;
 
 /* ISR called on every GPIO signal edge */
@@ -28,13 +31,9 @@ static irqreturn_t freq_isr(int irq, void *data)
 	getnstimeofday(&cur_time);
 	delta = timespec_sub(cur_time, prev_time);
 	ns = ((long long)delta.tv_sec * 1000000000) + delta.tv_nsec;
-	ns_periods[write_ptr] = ns;
+	ns_periods[buf_ptr] = ns;
 	prev_time = cur_time;
-
-	write_ptr = (write_ptr + 1) % BUFFER_SIZE;
-	if (write_ptr == read_ptr) {
-		read_ptr = (read_ptr + 1) % BUFFER_SIZE;
-	}
+	buf_ptr = (buf_ptr + 1) % BUFFER_SIZE;
 
 	return IRQ_HANDLED;
 }
@@ -56,20 +55,46 @@ static ssize_t freq_write(struct file *file, const char __user *buf, size_t coun
 
 static ssize_t freq_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
+	int i, err, hz, s_count = 0;
+	unsigned long sample, sum = 0;
 	char str[16];
-	int error, char_count = 0;
 
-	if (read_ptr != write_ptr) {
-		sprintf(str, "%ld\n", ns_periods[read_ptr]);
-		char_count = strlen(str);
-		error = copy_to_user(buf, str, char_count + 1);
-		if (error != 0) {
-			printk(KERN_ERR "%s: copy_to_user returned %d\n", __func__, error);
-			return -EFAULT;
+	/* Sum the samples without interference from the ISR */
+	disable_irq(freq_irq);
+	for (i = 0; i < BUFFER_SIZE; i += 2) {
+		sample = ns_periods[i] + ns_periods[i + 1];
+		hz = 1000000000 / sample;
+		if (hz >= min_freq && hz <= max_freq) {
+			sum += sample;
+			s_count++;
 		}
-		read_ptr = (read_ptr + 1) % BUFFER_SIZE;
 	}
-	return char_count;
+	memset(ns_periods, 0, sizeof ns_periods);
+	buf_ptr = 0;
+	enable_irq(freq_irq);
+
+	/* Average the samples if the majority are valid */
+	if (s_count > BUFFER_SIZE / 4) {
+		sample = sum / s_count;
+		if (sample > 0) {
+			hz = 1000000000 / sample;
+		} else {
+			return 0;
+		}
+	} else {
+		return 0;
+	}
+
+	/* Copy the average back to userland */
+	sprintf(str, "%d\n", hz);
+	s_count = strlen(str);
+	err = copy_to_user(buf, str, s_count + 1);
+	if (err != 0) {
+		printk(KERN_ERR "%s: copy_to_user returned %d\n", __func__, err);
+		return -EFAULT;
+	}
+
+	return s_count;
 }
 
 static struct file_operations freq_fops = {
@@ -91,8 +116,8 @@ static int __init freq_init(void){
 	printk(KERN_INFO "%s: start\n", __func__);
 
 	getnstimeofday(&prev_time);
-	write_ptr = 0;
-	read_ptr = 0;
+	memset(ns_periods, 0, sizeof ns_periods);
+	buf_ptr = 0;
 
 	ret = gpio_request(gpio_pin, "input");
 	if (ret) {
@@ -110,6 +135,7 @@ static int __init freq_init(void){
 		goto fail;
 	}
 	freq_irq = ret;
+	/* RPi GPIO interrupts aren't reliable on rising edge only, but seem to do okay on rising and falling */
 	ret = request_irq(freq_irq, freq_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "freq", NULL);
 	if (ret) {
 		printk(KERN_ERR "%s: request_irq returned %d\n", __func__, ret);
