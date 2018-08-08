@@ -145,6 +145,7 @@ static int __init freq_init(void){
 
 	misc_register(&freq_misc_device);
 
+	printk(KERN_INFO "%s: gpio_pin=%d min_freq=%d max_freq=%d\n", __func__, gpio_pin, min_freq, max_freq);
 	printk(KERN_INFO "%s: end\n", __func__);
 	return ret;
 
@@ -165,6 +166,15 @@ static void __exit freq_exit(void){
 
 module_init(freq_init);
 module_exit(freq_exit);
+
+module_param(gpio_pin, int, S_IRUGO);
+MODULE_PARM_DESC(gpio_pin, "GPIO input pin number for frequency measurement (default #DEFAULT_GPIO_PIN)");
+
+module_param(min_freq, int, S_IRUGO);
+MODULE_PARM_DESC(min_freq, "Minimum expected frequency to be measured (default #DEFAULT_MIN_FREQ)");
+
+module_param(max_freq, int, S_IRUGO);
+MODULE_PARM_DESC(max_freq, "Maximum expected frequency to be measured (default #DEFAULT_MAX_FREQ)");
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Michael Johns <michaelwaynejohns@gmail.com>");
