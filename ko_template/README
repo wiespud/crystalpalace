@@ -1,3 +1,5 @@
-Inspiration from these sites:
+Helpful sites:
 https://www.ploxiln.net/rpi_kernel_modules.html
 https://blog.fazibear.me/the-beginners-guide-to-linux-kernel-module-raspberry-pi-and-led-matrix-790e8236e8e9
+https://www.disk91.com/2015/technology/systems/rf433-raspberry-pi-gpio-kernel-driver-for-interrupt-management/
+https://github.com/bengtmartensson/lirc_rpi/blob/master/lirc_rpi.c

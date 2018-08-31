@@ -135,7 +135,7 @@ static int __init freq_init(void){
 		goto fail;
 	}
 	freq_irq = ret;
-	/* RPi GPIO interrupts aren't reliable on rising edge only, but seem to do okay on rising and falling */
+	/* Interrupt on rising and falling edges to better handle glitchy signals */
 	ret = request_irq(freq_irq, freq_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "freq", NULL);
 	if (ret) {
 		printk(KERN_ERR "%s: request_irq returned %d\n", __func__, ret);

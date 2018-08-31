@@ -1,0 +1,6 @@
+Example application for the HH10D relative humidity sensor using the frequency measurement device driver
+
+HH10D datasheet:
+https://www.sparkfun.com/datasheets/Sensors/Temperature/HH10D.pdf
+
+This example application reads the calibration factors from the I2C EEPROM, then reads the frequency from /dev/freq, and finally calculates and prints the relative humidity.

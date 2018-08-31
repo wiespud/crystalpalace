@@ -1,0 +1,9 @@
+RHT03 device driver
+
+After building and installing the relative humidity and temperature can be read from /dev/rht03.
+
+Module paramaters:
+	gpio_pin	pin connected to RHT03 data pin (default 4)
+
+RHT03 datasheet:
+https://cdn.sparkfun.com/datasheets/Sensors/Weather/RHT03.pdf

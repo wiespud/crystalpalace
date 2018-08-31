@@ -1,4 +1,10 @@
-Inspiration from these sites:
-https://www.disk91.com/2015/technology/systems/rf433-raspberry-pi-gpio-kernel-driver-for-interrupt-management/
-https://blog.fazibear.me/the-beginners-guide-to-linux-kernel-module-raspberry-pi-and-led-matrix-790e8236e8e9
-https://github.com/bengtmartensson/lirc_rpi/blob/master/lirc_rpi.c
+Frequency measurement device driver
+
+After building and installing, the frequency in Hz can be read from /dev/freq.
+
+Module paramaters:
+	gpio_pin	frequency is measured on this pin (default 17)
+	min_freq	minimum expected frequency to be measured (default 5 kHz)
+	max_freq	maximum expected frequency to be measured (default 10 kHz)
+
+Special care is taken to handle signals with glitchy edges by recording both rising and falling edges. Signal periods that are not between min_freq and max_freq are ignored.
