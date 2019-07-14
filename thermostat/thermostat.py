@@ -2,15 +2,18 @@
 
 import gpiozero
 import subprocess
+import sys
 import time
 
 def time_print(msg):
     ts = time.strftime('%Y-%m-%d %H:%M:%S')
     print '%s %s' % (ts, msg)
 
-TEMP_CMD = 'ssh root@Omega-95EF.local cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave'
 RETRIES = 5
 def get_temp():
+    temp_cmd_file = '%s/set_room.cmd' % sys.path[0]
+    with open(temp_cmd_file) as fin:
+        temp_cmd = fin.read().strip()
     retry = 0
     while True:
         retry += 1
@@ -43,9 +46,9 @@ def get_temp():
     temp = temp_c * 9.0 / 5.0 + 32.0
     return temp
 
-SET_TEMP_FILE = '/home/pi/thermostat_set_temp.txt'
 def get_set_temp():
-    with open(SET_TEMP_FILE) as fin:
+    set_temp_file = '%s/set_temp.txt' % sys.path[0]
+    with open(set_temp_file) as fin:
         set_temp = fin.read().strip()
     return float(set_temp)
 
@@ -59,6 +62,7 @@ def main(args):
     samples = [ None for i in range(0, SAMPLES) ]
 
     while True:
+        # XXX TODO: handle None here
         temp = get_temp()
         samples.pop(0)
         samples.append(temp)
@@ -81,8 +85,7 @@ def main(args):
         time_print('temp=%.1f avg=%.1f set=%.1f ac=%s' % (temp, avg_temp, set_temp, running))
         time.sleep(5)
 
-    return 0
+    return 1
 
 if __name__ == '__main__':
-    import sys
     sys.exit(main(sys.argv))
