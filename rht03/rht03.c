@@ -17,6 +17,7 @@ static unsigned char data_buf[DATA_BYTES];
 static int bit_count;
 static int gpio_pin = DEFAULT_GPIO_PIN;
 static int rht03_irq = -1;
+static bool return_zero = false;
 
 /* ISR called on every GPIO falling edge */
 static irqreturn_t rht03_isr(int irq, void *data)
@@ -62,6 +63,12 @@ static ssize_t rht03_read(struct file *file, char __user *buf, size_t count, lof
 	int i, h, t, err, s_count = 0;
 	unsigned char chk = 0;
 	char str[32];
+
+	/*  */
+	if (return_zero) {
+		return_zero = false;
+		return 0;
+	}
 
 	/* Start timing falling edges */
 	getnstimeofday(&prev_time);
@@ -122,6 +129,7 @@ static ssize_t rht03_read(struct file *file, char __user *buf, size_t count, lof
 	}
 #endif
 
+	return_zero = true;
 	return s_count;
 }
 
@@ -137,6 +145,7 @@ static struct miscdevice rht03_misc_device = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = DEV_NAME,
 	.fops = &rht03_fops,
+	.mode = 0666,
 };
 
 static int __init rht03_init(void){
