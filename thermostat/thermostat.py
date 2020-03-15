@@ -34,8 +34,8 @@ OFF_MARGIN = 0.5
 SAMPLES = 5
 
 HALLWAY_DATA_FILE = '/dev/rht03'
-BEDROOM_CMD = 'ssh root@Omega-95EF.local cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave'
-NURSERY_CMD = 'ssh chip@chip.local cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave'
+BEDROOM_CMD = 'ssh root@192.168.0.6 cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave'
+NURSERY_CMD = 'ssh pi@192.168.0.7 cat /sys/devices/w1_bus_master1/28-000003c72bff/w1_slave'
 BASEMENT_CMD = 'cat /sys/devices/w1_bus_master1/28-000003c73f29/w1_slave'
 
 TEMP_CMD = NURSERY_CMD
@@ -177,6 +177,7 @@ def main(args):
         else:
             logger.error('Invalid command %s' % cmd)
             return 1
+        time.sleep(0.5)
         return 0
 
     # else start daemon loop
@@ -230,15 +231,15 @@ def main(args):
         else:
             sleep_time = 1
 
-            (hallway_temp, hallway_hum) = get_hallway_data()
-            if hallway_temp is None or hallway_hum is None:
-                hallway_temp = 'Error'
-                hallway_hum = 'Error'
-            else:
-                hallway_temp = '%.1f F' % hallway_temp
-                hallway_hum = '%.1f%%' % hallway_hum
-            write_file(HALLWAYTEMP_FILE, hallway_temp)
-            write_file(HALLWAYHUM_FILE, hallway_hum)
+            #~ (hallway_temp, hallway_hum) = get_hallway_data()
+            #~ if hallway_temp is None or hallway_hum is None:
+                #~ hallway_temp = 'Error'
+                #~ hallway_hum = 'Error'
+            #~ else:
+                #~ hallway_temp = '%.1f F' % hallway_temp
+                #~ hallway_hum = '%.1f%%' % hallway_hum
+            #~ write_file(HALLWAYTEMP_FILE, hallway_temp)
+            #~ write_file(HALLWAYHUM_FILE, hallway_hum)
 
             bedroom_temp = get_temp(BEDROOM_CMD)
             if bedroom_temp is None:
