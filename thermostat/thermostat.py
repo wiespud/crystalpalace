@@ -15,6 +15,7 @@ HALLWAYTEMP_FILE = '/var/www/html/hallwaytemp.txt'
 HALLWAYHUM_FILE = '/var/www/html/hallwayhum.txt'
 BEDROOMTEMP_FILE = '/var/www/html/bedroomtemp.txt'
 NURSERYTEMP_FILE = '/var/www/html/nurserytemp.txt'
+FAMILYROOMTEMP_FILE = '/var/www/html/familyroomtemp.txt'
 BASEMENTTEMP_FILE = '/var/www/html/basementtemp.txt'
 CURSTAT_FILE = '/var/www/html/curstat.txt'
 SETTEMP_FILE = '/var/www/html/temp.txt'
@@ -35,6 +36,7 @@ SAMPLES = 5
 
 HALLWAY_DATA_FILE = '/dev/rht03'
 BEDROOM_CMD = 'ssh root@192.168.0.6 cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave'
+FAMILYROOM_CMD = 'ssh pi@192.168.0.2 cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave'
 NURSERY_CMD = 'ssh pi@192.168.0.7 cat /sys/devices/w1_bus_master1/28-000003c72bff/w1_slave'
 BASEMENT_CMD = 'cat /sys/devices/w1_bus_master1/28-000003c73f29/w1_slave'
 
@@ -254,6 +256,13 @@ def main(args):
             #~ else:
                 #~ nursery_temp = '%.1f F' % nursery_temp
             #~ write_file(NURSERYTEMP_FILE, bedroom_temp)
+
+            familyroom_temp = get_temp(FAMILYROOM_CMD)
+            if familyroom_temp is None:
+                familyroom_temp = 'Error'
+            else:
+                familyroom_temp = '%.1f F' % familyroom_temp
+            write_file(FAMILYROOMTEMP_FILE, familyroom_temp)
 
             basement_temp = get_temp(BASEMENT_CMD)
             if basement_temp is None:
