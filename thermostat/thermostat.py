@@ -77,6 +77,12 @@ def get_temp(temp_cmd):
                 return None
             else:
                 time.sleep(1)
+        except ValueError:
+            logger.warning('ValueError while trying to get temperature using command: %s' % temp_cmd)
+            if retry > RETRIES:
+                return None
+            else:
+                time.sleep(1)
         else:
             break
     if b'YES' not in output:
