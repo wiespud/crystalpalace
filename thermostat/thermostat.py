@@ -35,9 +35,9 @@ OFF_MARGIN = 0.5
 SAMPLES = 5
 
 HALLWAY_DATA_FILE = '/dev/rht03'
-BEDROOM_CMD = 'ssh root@192.168.0.6 cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave'
-FAMILYROOM_CMD = 'ssh pi@192.168.0.2 cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave'
 NURSERY_CMD = 'ssh pi@192.168.0.7 cat /sys/devices/w1_bus_master1/28-000003c72bff/w1_slave'
+BEDROOM_CMD = 'ssh pi@192.168.0.2 cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave'
+FAMILYROOM_CMD = 'ssh root@192.168.0.6 cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave'
 BASEMENT_CMD = 'cat /sys/devices/w1_bus_master1/28-000003c73f29/w1_slave'
 
 TEMP_CMD = NURSERY_CMD
