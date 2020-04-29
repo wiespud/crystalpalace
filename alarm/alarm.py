@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import gpiozero
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -32,22 +34,99 @@ ICY-META: StreamTitle='Good Night and Good Rest - John Johnson';StreamUrl='';
 
 '''
 
+pid_file = '/tmp/alarm.pid'
+alarm = False
+play = False
+
+def handle_signal(signum, stack):
+    global alarm
+    global play
+    if not alarm and not play:
+        alarm = True
+
+def handle_button():
+    global alarm
+    global play
+    if alarm or play:
+        alarm = False
+        play = False
+    else:
+        play = True
+
 def main(args):
+    global pid_file
+    global alarm
+    global play
 
-    # set up button to turn off alarm
-    button = gpiozero.Button(26)
+    pid = None
+    try:
+        with open(pid_file, 'r') as fin:
+            pid = fin.read()
+    except IOError:
+        pass
 
-    # mute and wait 30 seconds in case the stream starts with an advertisement
-    subprocess.call(["amixer", "set", "Headphone", "mute"])
-    proc = subprocess.Popen(["mpg123", "http://cms.stream.publicradio.org/cms.mp3"])
-    time.sleep(30)
-    subprocess.call(["amixer", "set", "Headphone", "unmute"])
+    if 'daemon' in args:
+        if pid:
+            print 'alarm daemon is already running pid=%s' % pid
+            return 1
+        else:
+            pid = str(os.getpid())
+            with open(pid_file, 'w') as fout:
+                fout.write(pid)
 
-    # wait 1 hour for button press
-    button.wait_for_press(3600)
+        # daemon setup
+        signal.signal(signal.SIGUSR1, handle_signal)
+        button = gpiozero.Button(26)
+        button.when_pressed=handle_button
+        proc = None
+        start = 0.0
 
-    # stop stream
-    proc.terminate()
+        # daemon loop
+        try:
+            while True:
+                if proc:
+                    if ((start > 0.0 and (time.time() - start) > 3600) or
+                        (not alarm and not play)):
+                        proc.terminate()
+                        proc = None
+                        alarm = False
+                        play = False
+                else:
+                    if alarm:
+                        # mute and wait 30 seconds in case the stream starts with an advertisement
+                        subprocess.call(["amixer", "set", "Headphone", "mute"])
+                        proc = subprocess.Popen(["mpg123", "http://cms.stream.publicradio.org/cms.mp3"])
+                        start = time.time()
+                        time.sleep(30)
+                        subprocess.call(["amixer", "set", "Headphone", "unmute"])
+                    elif play:
+                        proc = subprocess.Popen(["mpg123", "http://cms.stream.publicradio.org/cms.mp3"])
+                        start = 0.0
+                time.sleep(1)
+        except:
+            os.unlink(pid_file)
+            return 1
+
+    # alarm called from cron
+    else:
+        if pid:
+            os.kill(int(pid), signal.SIGUSR1)
+        else:
+            # the daemon is not running so run a standalone alarm instance
+            button = gpiozero.Button(26)
+
+            # mute and wait 30 seconds in case the stream starts with an advertisement
+            subprocess.call(["amixer", "set", "Headphone", "mute"])
+            proc = subprocess.Popen(["mpg123", "http://cms.stream.publicradio.org/cms.mp3"])
+            start = time.time()
+            time.sleep(30)
+            subprocess.call(["amixer", "set", "Headphone", "unmute"])
+
+            # wait 1 hour for button press
+            button.wait_for_press(3600)
+
+            # stop stream
+            proc.terminate()
 
     return 0
 
