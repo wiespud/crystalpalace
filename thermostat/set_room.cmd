@@ -1,1 +1,0 @@
-rooms/bedroom.cmd
