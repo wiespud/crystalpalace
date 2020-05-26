@@ -31,7 +31,7 @@ ROOMS = {
         'file' : '/var/www/html/basementtemp.txt',
     },
     'bedroom' : {
-        'cmd'  : 'ssh pi@192.168.0.2 cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave',
+        'cmd'  : 'ssh pi@bedroom.local cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave',
         'file' : '/var/www/html/bedroomtemp.txt',
         'data' : [ None for i in range(0, SAMPLES) ],
     },
@@ -40,7 +40,7 @@ ROOMS = {
         'file' : '/var/www/html/familyroomtemp.txt',
     },
     'nursery' : {
-        'cmd'  : 'ssh pi@192.168.0.7 cat /sys/devices/w1_bus_master1/28-000003c72bff/w1_slave',
+        'cmd'  : 'ssh pi@nursery.local cat /sys/devices/w1_bus_master1/28-000003c72bff/w1_slave',
         'file' : '/var/www/html/nurserytemp.txt',
         'data' : [ None for i in range(0, SAMPLES) ],
     }
