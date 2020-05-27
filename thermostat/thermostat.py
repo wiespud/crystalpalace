@@ -35,6 +35,10 @@ ROOMS = {
         'file' : '/var/www/html/bedroomtemp.txt',
         'data' : [ None for i in range(0, SAMPLES) ],
     },
+    'closet' : {
+        'cmd'  : 'ssh pi@pihole.local cat /sys/devices/w1_bus_master1/28-01143b8f3caa/w1_slave',
+        'file' : '/var/www/html/closettemp.txt',
+    },
     'familyroom' : {
         'cmd'  : 'ssh root@192.168.0.6 cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave',
         'file' : '/var/www/html/familyroomtemp.txt',
