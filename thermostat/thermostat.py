@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import fcntl
 import gpiozero
 import logging
@@ -19,6 +20,9 @@ COOL_FILE = '/var/www/html/cool_color.txt'
 HEAT_FILE = '/var/www/html/heat_color.txt'
 AUTO_FILE = '/var/www/html/auto_color.txt'
 ON_FILE = '/var/www/html/on_color.txt'
+HOUR_DC_FILE = '/var/www/html/hourdutycycle.txt'
+DAY_DC_FILE = '/var/www/html/daydutycycle.txt'
+LAST_UPDATE_FILE = '/var/www/html/lastupdate.txt'
 
 # Thermostat fine tuning
 TEMP_UP_DOWN = { 'Up': 1, 'Down': -1 }
@@ -173,6 +177,8 @@ def main(args):
     fan = gpiozero.OutputDevice(23, active_high=False)
     ac = gpiozero.OutputDevice(24, active_high=False)
 
+    duty_cycle_times = []
+    duty_cycle_values = []
     while True:
         samples = []
         avg_temp = 0.0
@@ -257,6 +263,24 @@ def main(args):
         if cur_stat != new_stat:
             write_file(CURSTAT_FILE, new_stat)
 
+        # duty cycle
+        ts = time.time()
+        duty_cycle_times.append(ts)
+        if new_stat in ('Heating', 'Cooling'):
+            duty_cycle_values.append(1)
+        else:
+            duty_cycle_values.append(0)
+        while duty_cycle_times[0] < (ts - 24*60*60):
+            duty_cycle_times.pop(0)
+            duty_cycle_values.pop(0)
+        hour_times = [ i for i in duty_cycle_times if i > (ts - 60*60) ]
+        hour_values = duty_cycle_values[-len(hour_times):]
+        hour_duty_cycle = 100.0 * float(sum(hour_values)) / float(len(hour_values))
+        day_duty_cycle = 100.0 * float(sum(duty_cycle_values)) / float(len(duty_cycle_values))
+        write_file(HOUR_DC_FILE, '%.0f%%' % hour_duty_cycle)
+        write_file(DAY_DC_FILE, '%.0f%%' % day_duty_cycle)
+
+        write_file(LAST_UPDATE_FILE, '%s' % datetime.datetime.now())
         logger.info('avg=%.1f set=%.1f mode=%s status=%s' % (avg_temp, set_temp, set_mode, new_stat))
 
     return 1
