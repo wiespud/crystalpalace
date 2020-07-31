@@ -12,44 +12,48 @@ import time
 from logging.handlers import RotatingFileHandler
 
 # Web content files
-CURSTAT_FILE = '/var/www/html/curstat.txt'
-SETTEMP_FILE = '/var/www/html/temp.txt'
-SETMODE_FILE = '/var/www/html/mode.txt'
-SETFAN_FILE = '/var/www/html/fan.txt'
-COOL_FILE = '/var/www/html/cool_color.txt'
-HEAT_FILE = '/var/www/html/heat_color.txt'
-AUTO_FILE = '/var/www/html/auto_color.txt'
-ON_FILE = '/var/www/html/on_color.txt'
-HOUR_DC_FILE = '/var/www/html/hourdutycycle.txt'
-DAY_DC_FILE = '/var/www/html/daydutycycle.txt'
-LAST_UPDATE_FILE = '/var/www/html/lastupdate.txt'
+WEB_PREFIX = '/var/www/html/thermostat_files/'
+AVERAGE_FILE = WEB_PREFIX + 'averagetemp.txt'
+CURSTAT_FILE = WEB_PREFIX + 'curstat.txt'
+SETTEMP_FILE = WEB_PREFIX + 'temp.txt'
+SETMODE_FILE = WEB_PREFIX + 'mode.txt'
+SETFAN_FILE = WEB_PREFIX + 'fan.txt'
+COOL_FILE = WEB_PREFIX + 'cool_color.txt'
+HEAT_FILE = WEB_PREFIX + 'heat_color.txt'
+AUTO_FILE = WEB_PREFIX + 'auto_color.txt'
+ON_FILE = WEB_PREFIX + 'on_color.txt'
+HOUR_DC_FILE = WEB_PREFIX + 'hourdutycycle.txt'
+DAY_DC_FILE = WEB_PREFIX + 'daydutycycle.txt'
+LAST_UPDATE_FILE = WEB_PREFIX + 'lastupdate.txt'
 
 # Thermostat fine tuning
 TEMP_UP_DOWN = { 'Up': 1, 'Down': -1 }
 MARGIN = 0.5
 SAMPLES = 5
+HOLD_TIME = 300.0 # seconds to force off after running continuously for one hour
 
 ROOMS = {
     'basement' : {
         'cmd'  : 'cat /sys/devices/w1_bus_master1/28-000003c73f29/w1_slave',
-        'file' : '/var/www/html/basementtemp.txt',
+        'file' : WEB_PREFIX + 'basementtemp.txt',
     },
     'bedroom' : {
         'cmd'  : 'ssh pi@bedroom.local cat /sys/devices/w1_bus_master1/28-01143bc12daa/w1_slave',
-        'file' : '/var/www/html/bedroomtemp.txt',
+        'file' : WEB_PREFIX + 'bedroomtemp.txt',
         'data' : [ None for i in range(0, SAMPLES) ],
     },
     'closet' : {
         'cmd'  : 'ssh pi@pihole.local cat /sys/devices/w1_bus_master1/28-01143b8f3caa/w1_slave',
-        'file' : '/var/www/html/closettemp.txt',
+        'file' : WEB_PREFIX + 'closettemp.txt',
     },
     'familyroom' : {
         'cmd'  : 'ssh root@192.168.0.6 cat /sys/devices/w1_bus_master1/28-01143ba557aa/w1_slave',
-        'file' : '/var/www/html/familyroomtemp.txt',
+        'file' : WEB_PREFIX + 'familyroomtemp.txt',
+        'data' : [ None for i in range(0, SAMPLES) ],
     },
     'nursery' : {
         'cmd'  : 'ssh pi@nursery.local cat /sys/devices/w1_bus_master1/28-000003c72bff/w1_slave',
-        'file' : '/var/www/html/nurserytemp.txt',
+        'file' : WEB_PREFIX + 'nurserytemp.txt',
         'data' : [ None for i in range(0, SAMPLES) ],
     }
 }
@@ -179,6 +183,7 @@ def main(args):
 
     duty_cycle_times = []
     duty_cycle_values = []
+    hold_end = 0.0
     while True:
         samples = []
         avg_temp = 0.0
@@ -213,6 +218,8 @@ def main(args):
                 logger.info('turning on fan')
                 fan.on()
 
+        ts = time.time()
+
         # handle heat and ac
         eligible_samples = [ i for i in samples if i is not None ]
         if len(eligible_samples) < len(samples) / 2:
@@ -230,11 +237,14 @@ def main(args):
                     logger.info('turning off ac')
                     ac.off()
                 if heat.value > 0:
-                    if avg_temp >= set_temp + MARGIN:
+                    if hold_end > ts:
+                        logger.info('turning off heat due to overuse')
+                        heat.off()
+                    elif avg_temp >= set_temp + MARGIN:
                         logger.info('turning off heat')
                         heat.off()
                 else:
-                    if avg_temp <= set_temp - MARGIN:
+                    if avg_temp <= set_temp - MARGIN and ts > hold_end:
                         logger.info('turning on heat')
                         heat.on()
             elif set_mode == 'Cool':
@@ -242,11 +252,14 @@ def main(args):
                     logger.info('turning off heat')
                     heat.off()
                 if ac.value > 0:
-                    if avg_temp <= set_temp - MARGIN:
+                    if hold_end > ts:
+                        logger.info('turning off ac due to overuse')
+                        ac.off()
+                    elif avg_temp <= set_temp - MARGIN:
                         logger.info('turning off ac')
                         ac.off()
                 else:
-                    if avg_temp >= set_temp + MARGIN:
+                    if avg_temp >= set_temp + MARGIN and ts > hold_end:
                         logger.info('turning on ac')
                         ac.on()
 
@@ -254,6 +267,8 @@ def main(args):
         new_stat = 'Off'
         if error_flag:
             new_stat = 'Error'
+        elif hold_end > ts:
+            new_stat = 'Hold'
         elif heat.value > 0:
             new_stat = 'Heating'
         elif ac.value > 0:
@@ -262,9 +277,9 @@ def main(args):
             new_stat = 'Fan'
         if cur_stat != new_stat:
             write_file(CURSTAT_FILE, new_stat)
+        write_file(AVERAGE_FILE, '%.1f F' % avg_temp)
 
         # duty cycle
-        ts = time.time()
         duty_cycle_times.append(ts)
         if new_stat in ('Heating', 'Cooling'):
             duty_cycle_values.append(1)
@@ -279,6 +294,10 @@ def main(args):
         day_duty_cycle = 100.0 * float(sum(duty_cycle_values)) / float(len(duty_cycle_values))
         write_file(HOUR_DC_FILE, '%.0f%%' % hour_duty_cycle)
         write_file(DAY_DC_FILE, '%.0f%%' % day_duty_cycle)
+
+        # if it has been running for an hour straight, let it rest for a bit
+        if hour_duty_cycle > 99.9:
+            hold_end = ts + HOLD_TIME
 
         write_file(LAST_UPDATE_FILE, '%s' % datetime.datetime.now())
         logger.info('avg=%.1f set=%.1f mode=%s status=%s' % (avg_temp, set_temp, set_mode, new_stat))
