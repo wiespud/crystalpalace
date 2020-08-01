@@ -262,6 +262,13 @@ def main(args):
                     if avg_temp >= set_temp + MARGIN and ts > hold_end:
                         logger.info('turning on ac')
                         ac.on()
+            else: # set_mode == 'Off':
+                if heat.value > 0:
+                    logger.info('turning off heat')
+                    heat.off()
+                if ac.value > 0:
+                    logger.info('turning off ac')
+                    ac.off()
 
         # set status
         new_stat = 'Off'
