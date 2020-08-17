@@ -7,6 +7,7 @@
         <script type='text/javascript'>
 
             function refresh() {
+                // handle updateme class elements
                 var elems = document.getElementsByClassName('updateme');
                 for (var i = 0; i < elems.length; i++) {
                     let req = new XMLHttpRequest();
@@ -20,6 +21,20 @@
                     req.open('GET', txtfile, true);
                     req.setRequestHeader('Cache-Control', 'no-cache');
                     req.send(null);
+                }
+                // turn things red if last update was too long ago
+                var thermostat = document.getElementById('thermostat');
+                var lastupdate = document.getElementById('lastupdate');
+                var lastupdateval = document.getElementById('lastupdateval');
+                var date = new Date();
+                var now = date.getTime();
+                var ts = Date.parse(lastupdateval.innerText);
+                if (now > ts + 60000.0) {
+                    thermostat.style.color = 'red';
+                    lastupdate.style.color = 'red';
+                } else {
+                    thermostat.style.color = 'silver';
+                    lastupdate.style.color = 'silver';
                 }
             }
 
@@ -77,7 +92,7 @@
 
 <!-- <h1>The Crystal Palace</h1> -->
 
-<h2>Thermostat</h2>
+<h2 id='thermostat'>Thermostat</h2>
 
 <h3>Status: <a class='updateme' txtfile='curstat.txt'></a> <a class='updateme' txtfile='averagetemp.txt'></a></h3>
 <h4>Bedroom: <a class='updateme' txtfile='bedroomtemp.txt'></a></h4>
@@ -100,7 +115,7 @@
 
 <h3>Statistics</h3>
 <h4>Duty Cycle: <a class='updateme' txtfile='hourdutycycle.txt'></a> (hour) <a class='updateme' txtfile='daydutycycle.txt'></a> (day)</h4>
-<h4>Last Update: <a class='updateme' txtfile='lastupdate.txt'></a></h4>
+<h4 id='lastupdate'>Last Update: <a class='updateme' id='lastupdateval' txtfile='lastupdate.txt'></a></h4>
 
 </body>
 </html>
