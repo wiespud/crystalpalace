@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+
+<html>
+    <script src='jquery-3.5.1.min.js'></script>
+    <head>
+        <meta http-equiv='Content-Type' content='text/html; charset=utf8' />
+        <script type='text/javascript'>
+
+            function capitalize(s) {
+                if (typeof s === 'string')
+                    return s.charAt(0).toUpperCase() + s.slice(1);
+                else
+                    return s;
+            }
+
+            function update(state) {
+
+                // handle updateme class elements
+                var elems = document.getElementsByClassName('updateme');
+                for (var i = 0; i < elems.length; i++) {
+                    var elem = elems[i];
+                    if (state[elem.id] != null)
+                        elem.innerText = capitalize(state[elem.id]);
+                    else if (state['sensors'][elem.id])
+                        elem.innerText = state['sensors'][elem.id]['temperature'];
+                    else
+                        console.log('unknown element: ' + elem.id);
+                }
+
+                // handle buttons
+                var elems = document.getElementsByClassName('updatebutton');
+                for (var i = 0; i < elems.length; i++) {
+                    var elem = elems[i];
+                    // color button based on matching state variable
+                    if (elem.hasAttribute('match')) {
+                        var match_val = state[elem.getAttribute('match')];
+                        if (elem.id == match_val) {
+                            var colorme = elem.getAttribute('colorme');
+                            elem.style.backgroundColor = colorme;
+                        } else {
+                            elem.style.backgroundColor = 'silver';
+                        }
+                    }
+                    // color button if sensor is being used for control
+                    else if (state['sensors'][elem.id]) {
+                        if (state['sensors'][elem.id]['use_for_control']) {
+                            elem.style.backgroundColor = 'lime';
+                            elem.innerText = 'Unselect';
+                        } else {
+                            elem.style.backgroundColor = 'silver';
+                            elem.innerText = 'Select';
+                        }
+                    } else {
+                        console.log('unknown element: ' + elem.id);
+                    }
+                }
+            }
+
+            function refresh() {
+                var req = new XMLHttpRequest();
+                req.onreadystatechange = function () {
+                    if (req.readyState == 4 && req.status == 200) {
+                        var state = JSON.parse(req.responseText);
+                        update(state);
+                    }
+                }
+                req.open('GET', 'rest/state', true);
+                req.setRequestHeader('Cache-Control', 'no-cache');
+                req.send(null);
+            }
+
+            function init() {
+                refresh();
+                var int = self.setInterval(function () {
+                    refresh();
+                }, 5000);
+            }
+
+            function button(elem) {
+                $.ajax({
+                    url: 'rest/button',
+                    type: 'post',
+                    data: elem.id
+                });
+                refresh();
+            }
+
+        </script>
+    </head>
+
+<body onload='init()' style='font-family:arial;font-weight:normal;color:silver;background-color:black;zoom:140%;'>
+
+<h2 id='thermostat'>Thermostat</h2>
+
+<h3>Status: <a class='updateme' id='status'></a> <a class='updateme' id='cur_temp'></a> F</h3>
+<h4>Bedroom: <a class='updateme' id='bedroom'></a> F <button class='updatebutton' id='bedroom' onclick='button(this)' style='background-color:silver'></button></h4>
+<h4>Apollo's Room: <a class='updateme' id='apollo'></a> F <button class='updatebutton' id='apollo' onclick='button(this)' style='background-color:silver'></button></h4>
+<h4>Nursery: <a class='updateme' id='nursery'></a> F <button class='updatebutton' id='nursery' onclick='button(this)' style='background-color:silver'></button></h4>
+<h4>Family Room: <a class='updateme' id='familyroom'></a> F <button class='updatebutton' id='familyroom' onclick='button(this)' style='background-color:silver'></button></h4>
+<h4>Basement: <a class='updateme' id='basement'></a> F <button class='updatebutton' id='basement' onclick='button(this)' style='background-color:silver'></button></h4>
+
+<h3>Settings</h3>
+<h4>Temperature: <a class='updateme' id='set_temp'></a> F</h4>
+<button class='normalbutton' id='down' onclick='button(this)' style='background-color:silver'>Down</button>
+<button class='normalbutton' id='up' onclick='button(this)' style='background-color:silver'>Up</button>
+<h4>Mode: <a class='updateme' id='mode'></a></h4>
+<button class='updatebutton' id='cool' match='mode' colorme='aqua' onclick='button(this)' style='background-color:silver'>Cool</button>
+<button class='updatebutton' id='heat' match='mode' colorme='orange' onclick='button(this)' style='background-color:silver'>Heat</button>
+<button class='normalbutton' id='off' onclick='button(this)' style='background-color:silver'>Off</button>
+<h4>Fan: <a class='updateme' id='fan'></a></h4>
+<button class='normalbutton' id='auto' onclick='button(this)' style='background-color:silver'>Auto</button>
+<button class='updatebutton' id='on' match='fan' colorme='lime' onclick='button(this)' style='background-color:silver'>On</button>
+
+<h3>Statistics</h3>
+<h4>Duty Cycle: <a class='updateme' id='duty_cycle'></a>%</h4>
+<h4>Current Run Time: <a class='updateme' id='current_run_time'></a> minutes</h4>
+<h4>Last Run Time: <a class='updateme' id='last_run_time'></a> minutes</h4>
+
+</body>
+</html>
