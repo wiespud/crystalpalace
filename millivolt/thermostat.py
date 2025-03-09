@@ -15,7 +15,7 @@ import time
 
 from logging.handlers import RotatingFileHandler
 
-margin = 1 # degrees f
+margin = 0.5 # degrees f
 sample_count = 3 # number of previous samples to average
 poll_rate = 5 # seconds
 timeout = 60 # seconds
